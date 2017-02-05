@@ -33,12 +33,13 @@ $workbook = PHPExcel_IOFactory::load( 'currencies-list.xlsx' );
 $sheet = $workbook->getSheetByName( 'Currencies List (Values)' );
 
 $currrencies = array();
+$currencies_by_symbol = array();
 
 foreach ( $sheet->getRowIterator( 3 ) as $row ) {
     $display_format = $sheet->getCell( 'F' . $row->getRowIndex() )->getValue();
     $separators = get_separators( $display_format );
 
-    $currencies[] = array(
+    $currency = array(
         'name'           => $sheet->getCell( 'B' . $row->getRowIndex() )->getValue(),
         'code'           => $sheet->getCell( 'C' . $row->getRowIndex() )->getValue(),
         'symbol'         => $sheet->getCell( 'E' . $row->getRowIndex() )->getValue(),
@@ -47,17 +48,31 @@ foreach ( $sheet->getRowIterator( 3 ) as $row ) {
         'thousands_separator' => $separators['thousands_separator'],
         'decimal_point' => $separators['decimal_point'],
     );
+
+    $currencies_by_symbol[ $currency['symbol'] ][] = $currency;
+    $currencies[] = $currency;
 }
 
 
 echo "\tprivate \$currencies_codes_by_symbol = array(\n";
 
-foreach ( $currencies as $currency ) {
-    if ( ! $currency['symbol'] ) {
+foreach ( $currencies_by_symbol as $symbol => $entries ) {
+    if ( empty( $symbol ) ) {
         continue;
     }
 
-    echo sprintf( "\t\t'%s' => '%s',\n", $currency['symbol'], $currency['code'] );
+    if ( 1 === count( $entries ) ) {
+        echo sprintf( "\t\t'%s' => '%s',\n", $symbol, $entries[0]['code'] );
+        continue;
+    }
+
+    echo sprintf( "\t\t'%s' => array(\n", $symbol );
+
+    foreach ( $entries as $entry ) {
+        echo sprintf( "\t\t\t'%s',\n", $entry['code'] );
+    }
+
+    echo "\t\t),\n";
 }
 
 echo "\t);\n\n";
